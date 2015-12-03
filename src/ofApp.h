@@ -76,7 +76,7 @@ private:
     int calibrationControl;
     int duration;
     int endTime;
-    int westMin,westMax,northMin,northMax,eastMin,eastMax,southMin,southMax;
+    int westMin,westMax,northMin,northMax,eastMin,eastMax,southMin,southMax,middleMax,middleMin;
 
 
 

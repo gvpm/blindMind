@@ -28,6 +28,8 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     westMin=510;westMax=0;northMin=510;northMax=0;eastMin=510;eastMax=0;southMin=510;southMax=0;
+
+
     lvl = 0;
 
     state = 0;
@@ -73,6 +75,8 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    middleMax = (westMax+northMax+eastMax+southMax)/4;
+    middleMin= (westMin+northMin+eastMin+southMin)/4;
 
     lvl = ofMap(iPotValue,0,1023,10,0);
     sLvl = ofToString(lvl);
@@ -240,7 +244,7 @@ void ofApp::draw(){
 
     //ARDUINO WORKING
 	} else {
-
+    //CALIBRATION
 	  if(calibrationControl==1)  {
 
         if(currentTime < endTime){
@@ -280,7 +284,7 @@ void ofApp::draw(){
             calibrationControl=0;
         }
 	  }else if(calibrationControl==0){
-
+    //DEFAULT STATE
 	      if (state == 0){
 
 
@@ -348,13 +352,15 @@ void ofApp::draw(){
 
 
 	  }
+
+	  //PRESENTATION STATE
 	  }if(state ==1){
 	      cout <<"hi";
 
 	      //ofSetColor(0);
 
 	  ///EVERYTHING
-
+        //ONE IF FOR EACH LVL
         if(lvl==0){
                //  if (imgBuffer.size()>0){
 
@@ -423,19 +429,18 @@ void ofApp::draw(){
 
         ofBackground(0,0,255);  ofSetColor(100);
 
-		string values = "Values "+westLightValue+" "+northLightValue+" "+eastLightValue+" "+southLightValue+" "+potValue+" "+sLvl;
-		font.drawString(values, 215, 40);
 
 
 
-    int maxReduction=400;
+
+
 
 
 
 		int recWidth = ofGetWidth()/3;
-    int recHeight = ofGetHeight()/3;
-    int alpha = 20;
-    int grayColor = 0;
+        int recHeight = ofGetHeight()/3;
+        int alpha = 20;
+        int grayColor = 0;
 
 
     //draw rectangles on top
@@ -443,19 +448,29 @@ void ofApp::draw(){
 
 
     for(int i =0 ; i<3;i++){
-        if(i==0){
-            grayColor = ofMap(inorthWestLightValue,(northMin+westMin)/2,(northMax+westMax)/2,0,255);
+        //northwest
+        if(i==0&&inorthWestLightValue>(((northMax+westMax)/2)-100)){
+            grayColor = ofMap(inorthWestLightValue,((northMax+westMax)/2)-100,(northMax+westMax)/2,0,50);
+
+        }else if(i==0){
+            grayColor=0;
         }
+        //north
         if(i==1&&inorthLightValue>(northMax-100)){
             grayColor = ofMap(inorthLightValue,northMax-100,northMax,0,50);
-            cout <<"    "+ofToString(northMax)+" "+northLightValue+"     ";
+
         }else if(i==1){
             grayColor=0;
         }
+        //northeast
+         if(i==2&&inorthEastLightValue>(((northMax+eastMax)/2)-100)){
+            grayColor = ofMap(inorthEastLightValue,((northMax+eastMax)/2)-100,(northMax+eastMax)/2,0,50);
 
-        if(i==2){
-            grayColor = ofMap(inorthEastLightValue,(northMin+eastMin)/2,(northMax+eastMax)/2,0,255);
+        }else if(i==2){
+            grayColor=0;
         }
+
+
 
         ofSetColor(grayColor);
         ofRect(0+recWidth*i,0,recWidth,recHeight);
@@ -463,12 +478,29 @@ void ofApp::draw(){
     }
     //draw rectangles on middle
      for(int i =0 ; i<3;i++){
-        if(i==0)
-            grayColor = ofMap(iwestLightValue,westMin,westMax,0,255);
-        if(i==1)
-            grayColor = ofMap(imiddleLightValue,eastMin,eastMax,0,255);
-        if(i==2)
-            grayColor = ofMap(ieastLightValue,eastMin,eastMax,0,255);
+
+
+          //west
+       if(i==0&&iwestLightValue>(westMax-100)){
+            grayColor = ofMap(iwestLightValue,westMax-100,westMax,0,50);
+
+        }else if(i==0){
+            grayColor=0;
+        }
+        //middle
+        if(i==1&&imiddleLightValue>(middleMax-100)){
+            grayColor = ofMap(imiddleLightValue,middleMax-100,middleMax,0,50);
+
+        }else if(i==1){
+            grayColor=0;
+        }
+        //east
+         if(i==2&&ieastLightValue>(eastMax-100)){
+            grayColor = ofMap(ieastLightValue,eastMax-100,eastMax,0,50);
+
+        }else if(i==2){
+            grayColor=0;
+        }
 
         ofSetColor(grayColor);
 
@@ -477,12 +509,32 @@ void ofApp::draw(){
     }
     //draw rectangles down
     for(int i =0 ; i<3;i++){
-        if(i==0)
-            grayColor = ofMap(isouthWestLightValue,(southMin+westMin)/2,(southMax+westMax)/2,0,255);
-        if(i==1)
-            grayColor = ofMap(isouthLightValue,southMin,southMax,0,255);
-        if(i==2)
-            grayColor = ofMap(isouthEastLightValue,(southMin+eastMin)/2,(southMax+eastMax)/2,0,255);
+
+            //southwest
+        if(i==0&&isouthWestLightValue>(((southMax+westMax)/2)-100)){
+            grayColor = ofMap(isouthWestLightValue,((southMax+westMax)/2)-100,(southMax+westMax)/2,0,50);
+
+        }else if(i==0){
+            grayColor=0;
+        }
+        //south
+        if(i==1&&isouthLightValue>(southMax-100)){
+            grayColor = ofMap(isouthLightValue,southMax-100,southMax,0,50);
+
+        }else if(i==1){
+            grayColor=0;
+        }
+        //southeast
+         if(i==2&&isouthEastLightValue>(((southMax+eastMax)/2)-100)){
+            grayColor = ofMap(isouthEastLightValue,((southMax+eastMax)/2)-100,(southMax+eastMax)/2,0,50);
+
+        }else if(i==2){
+            grayColor=0;
+        }
+
+
+
+
 
         ofSetColor(grayColor);
         ofRect(0+recWidth*i,recHeight*2,recWidth,recHeight);
@@ -499,6 +551,8 @@ void ofApp::draw(){
 
 
 
+        string values = "Values "+westLightValue+" "+northLightValue+" "+eastLightValue+" "+southLightValue+" "+potValue+" "+sLvl;
+		font.drawString(values, 215, 40);
 
         }else if(lvl==10){
             ofBackground(0);  ofSetColor(100);

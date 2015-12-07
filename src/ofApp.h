@@ -23,6 +23,14 @@ public:
 	void dragEvent(ofDragInfo dragInfo);
 	void gotMessage(ofMessage msg);
 
+	void drawBlindImage(int minBlind,int maxBlind,int reactionTresh);
+	void drawBlindImageNoise(int minBlind,int maxBlind,int reactionTresh);
+	int getBalancedColor(int x , int y);
+	int getMax (int a, int b, int c, int d);
+
+    int showInput;
+    int bug;
+
 
 	ofImage				bgImage;
 	ofTrueTypeFont		font;
@@ -56,6 +64,9 @@ private:
     int ieastLightValue;
     int isouthLightValue;
 
+    int westColor,northColor,eastColor,southColor;
+    int westX,westY,northX,northY,eastX,eastY,soutX,southY;
+
     int inorthWestLightValue;
     int inorthEastLightValue;
     int isouthWestLightValue;
@@ -77,6 +88,11 @@ private:
     int duration;
     int endTime;
     int westMin,westMax,northMin,northMax,eastMin,eastMax,southMin,southMax,middleMax,middleMin;
+    int cameraGray;
+    int minBlind,maxBlind,reactionTresh;
+
+    int scale;
+    float noiseScale;
 
 
 

@@ -37,9 +37,6 @@ public:
     ofTrueTypeFont      smallFont;
 	ofArduino	ard;
 	bool		bSetupArduino;			// flag variable for setting up arduino once
-    int r,g,b;
-    int x,y;
-    int angle,angleSpeed;
 
 private:
 
@@ -48,7 +45,7 @@ private:
     void analogPinChanged(const int & pinNum);
 	void updateArduino();
 
-
+    //Strings to store the input values
     string potValue;
     string westLightValue;
     string northLightValue;
@@ -56,41 +53,44 @@ private:
     string southLightValue;
     string sLvl;
 
+    //Real input values
     int iPotValue;
-
-
     int iwestLightValue;
     int inorthLightValue;
     int ieastLightValue;
     int isouthLightValue;
-
+    //Calculated colors
     int westColor,northColor,eastColor,southColor;
+    //Points of the rel sensors on the screen
     int westX,westY,northX,northY,eastX,eastY,soutX,southY;
-
+    //fake values that will be calculated
     int inorthWestLightValue;
     int inorthEastLightValue;
     int isouthWestLightValue;
     int isouthEastLightValue;
-
     int imiddleLightValue;
 
-      ofVideoGrabber vidGrabber;
+    //Video grabber variables
+    ofVideoGrabber vidGrabber;
     deque<ofImage> imgBuffer;
     int imgWidth, imgHeight;
     int maxBufferSize;
     int slitSize;
     ofImage img;
 
+    //Control variables
     int state;
     int lvl;
     int currentTime;
     int calibrationControl;
     int duration;
     int endTime;
+    //Mins ans Maxs of inputs
     int westMin,westMax,northMin,northMax,eastMin,eastMax,southMin,southMax,middleMax,middleMin;
     int cameraGray;
+    //To be used in the drawing functions, to make each lvl different
     int minBlind,maxBlind,reactionTresh;
-
+    //To be used on noise
     int scale;
     float noiseScale;
 

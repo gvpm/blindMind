@@ -2,17 +2,30 @@
 #include "ofApp.h"
 //--------------------------------------------------------------
 void ofApp::setup(){
+    //Other version of the representation, with bugs and unfinished
     bug = 0;
+
     showInput=1;
+    //Noise values
     scale = 9;
     noiseScale = 0.02;
+    //Gray value for the first LVLS where video input is used, will be used to fade
     cameraGray=255;
     ofEnableAlphaBlending();
+    //Inicial values to make the calibration work properly
     westMin=510;westMax=0;northMin=510;northMax=0;eastMin=510;eastMax=0;southMin=510;southMax=0;
+    potValue = "analog pin:";
+
+    //Keeps the current Level of blindness
     lvl = 0;
+    //Keeps the current state of the program
     state = 0;
+    //Keeps the calibration control status. 0=off 1=Max Calibration 2=Min Calibration
     calibrationControl=0;
+    //Duration of each calibration phase
     duration=5000;
+
+    //Setup of the videocamera device
     vidGrabber.setDeviceID(2);
     vidGrabber.setDesiredFrameRate(60);
     imgWidth = ofGetWidth()/3;
@@ -23,28 +36,34 @@ void ofApp::setup(){
     ofSetLineWidth(5) ;
     ofSetVerticalSync(true);
     ofSetFrameRate(60);
+
+
     ofBackground(255);
     ofSetBackgroundAuto(true);
-    potValue = "analog pin:";
+
+    //Sets up the printing fonts
     font.loadFont("franklinGothic.otf", 14);
     smallFont.loadFont("franklinGothic.otf", 14);
-    // replace the string below with the serial port for your Arduino board
-    // you can get this from the Arduino application or via command line
-    // for OSX, in your terminal type "ls /dev/tty.*" to get a list of serial devices
+    //serial port for your Arduino board
     ard.connect("/dev/ttyACM0", 57600);
     // listen for EInitialized notification. this indicates that
     // the arduino is ready to receive commands and it is safe to
-    // call setupArduino()
     ofAddListener(ard.EInitialized, this, &ofApp::setupArduino);
     bSetupArduino    = false;    // flag so we setup arduino when its ready, you don't need to touch this :)
 }
 //--------------------------------------------------------------
 void ofApp::update(){
+
+    //Represents the Min and Max of the middle tile accordint to the real values
     middleMax = (westMax+northMax+eastMax+southMax)/4;
     middleMin= (westMin+northMin+eastMin+southMin)/4;
+
+    //Level gets the read from the potentiometer
     lvl = ofMap(iPotValue,0,1023,10,0);
+    //Lvl number in a string format
     sLvl = ofToString(lvl);
 
+    //Pushes   one image fro the camera to the buffer
     vidGrabber.update();
     if (vidGrabber.isFrameNew())
     {
@@ -53,22 +72,24 @@ void ofApp::update(){
         imgBuffer.push_front(img);
     }
     if (imgBuffer.size()>maxBufferSize) imgBuffer.pop_back();
-    /*
-    int tresh = ofMap(20,(northMin+westMin)/2,(northMax+westMax)/2,0,255);
-    int tresh2 = ofMap(150,(northMin+westMin)/2,(northMax+westMax)/2,0,255);
-    int northMapped=ofMap(inorthLightValue,0,1023,northMin,northMax);
-    int westMapped=ofMap(iwestLightValue,0,1023,westMin,westMax);
-    if(abs(northMapped-westMapped)<tresh&&((northMapped+westMapped)/2)>tresh2){
-        inorthWestLightValue = (northMax-northMapped)+(westMax-westMapped);
-        }else{
-        inorthWestLightValue = ((inorthLightValue+iwestLightValue)/2);
-    }
-    */
-    //SIMPLE color of sensor
+
+    //SIMPLE color of sensor from REAL INPUT
+    //Will calculate the gray color based on the light input taking
+    //into account the Min and The max values of that environment
     westColor = ofMap(iwestLightValue,westMin,westMax,0,255);
     northColor = ofMap(inorthLightValue,northMin,northMax,0,255);
     eastColor = ofMap(ieastLightValue,eastMin,eastMax,0,255);
     southColor = ofMap(isouthLightValue,southMin,southMax,0,255);
+
+    //Fake inputs, will calculate the values from the tiles between sensors
+    inorthWestLightValue = ((inorthLightValue+iwestLightValue)/2);
+    inorthEastLightValue = ((inorthLightValue+ieastLightValue)/2);
+    isouthWestLightValue = ((isouthLightValue+iwestLightValue)/2);
+    isouthEastLightValue = ((isouthLightValue+ieastLightValue)/2);
+    imiddleLightValue=(iwestLightValue+inorthLightValue+ieastLightValue+isouthLightValue+inorthWestLightValue
+    +inorthEastLightValue+isouthWestLightValue+isouthEastLightValue)/8;
+
+    //Position of the center of each REAL SENSOR
     westX= ofGetWidth()/6;
     westY= ofGetHeight()/2;
     northX= ofGetWidth()/2;
@@ -79,13 +100,7 @@ void ofApp::update(){
     southY= (ofGetHeight()/6)*5;
 
 
-    inorthWestLightValue = ((inorthLightValue+iwestLightValue)/2);
-    inorthEastLightValue = ((inorthLightValue+ieastLightValue)/2);
-    isouthWestLightValue = ((isouthLightValue+iwestLightValue)/2);
-    isouthEastLightValue = ((isouthLightValue+ieastLightValue)/2);
-    imiddleLightValue=(iwestLightValue+inorthLightValue+ieastLightValue+isouthLightValue+inorthWestLightValue
-    +inorthEastLightValue+isouthWestLightValue+isouthEastLightValue)/8;
-    //UNCOMMENT THIS
+    //Update of the arduino
     updateArduino();
 
 }
@@ -98,11 +113,19 @@ void ofApp::setupArduino(const int & version) {
     // print firmware name and version to the console
     ofLogNotice() << ard.getFirmwareName();
     ofLogNotice() << "firmata v" << ard.getMajorFirmwareVersion() << "." << ard.getMinorFirmwareVersion();
+
+    //SETUP OF PINS
+    //WEST SENSOR
     ard.sendAnalogPinReporting(0, ARD_ANALOG);
+    //NORTH SENSOR
     ard.sendAnalogPinReporting(1, ARD_ANALOG);
+    //EAST SENSOR
     ard.sendAnalogPinReporting(2, ARD_ANALOG);
+    //SOUTH SENSOR
     ard.sendAnalogPinReporting(3, ARD_ANALOG);
+    //POTENTIOMETER
     ard.sendAnalogPinReporting(4, ARD_ANALOG);
+
     // Listen for changes on the digital and analog pins
     ofAddListener(ard.EDigitalPinChanged, this, &ofApp::digitalPinChanged);
     ofAddListener(ard.EAnalogPinChanged, this, &ofApp::analogPinChanged);
@@ -112,75 +135,76 @@ void ofApp::updateArduino(){
     // update the arduino, get any data or messages.
     // the call to ard.update() is required
     ard.update();
-    // do not send anything until the arduino has been set up
-    //if (bSetupArduino) {
-        // fade the led connected to pin D11
-        //ard.sendPwm(11, (int)(128 + 128 * sin(ofGetElapsedTimef())));   // pwm...
-    //}
+
 }
 // digital pin event handler, called whenever a digital pin value has changed
 // note: if an analog pin has been set as a digital pin, it will be handled
 // by the digitalPinChanged function rather than the analogPinChanged function.
 //--------------------------------------------------------------
 void ofApp::digitalPinChanged(const int & pinNum) {
-    // do something with the digital input. here we're simply going to print the pin number and
-    // value to the screen each time it changes
-    //buttonState = "digital pin: " + ofToString(pinNum) + " = " + ofToString(ard.getDigital(pinNum));
+
 }
 // analog pin event handler, called whenever an analog pin value has changed
 //--------------------------------------------------------------
 void ofApp::analogPinChanged(const int & pinNum) {
-    // do something with the analog input. here we're simply going to print the pin number and
-    // value to the screen each time it changes
+    //Reads the value of the West Input
     if(pinNum==0){
-        //potValue = "Pot: " + ofToString(pinNum) + " = " + ofToString(ard.getAnalog(pinNum));
+        //Stores de value into a string
         westLightValue= ofToString(ard.getAnalog(pinNum));
-        //  r = ofMap(ard.getAnalog(pinNum),0,1023,0,255);
+        //Stores the int value into a variable
         iwestLightValue = ard.getAnalog(pinNum);
-    }
+    }//Reads the value of the North Input
     if(pinNum==1){
-        //lightValue = "Light: " + ofToString(pinNum) + " = " + ofToString(ard.getAnalog(pinNum));
+        //Stores de value into a string
         northLightValue = ofToString(ard.getAnalog(pinNum));
-        //g = ofMap(ard.getAnalog(pinNum),0,1023,0,255);
+        //Stores the int value into a variable
         inorthLightValue = ard.getAnalog(pinNum);
-    }
+    }//Reads the value of the East Input
     if(pinNum==2){
-        //lightValue = "Light: " + ofToString(pinNum) + " = " + ofToString(ard.getAnalog(pinNum));
+        //Stores de value into a string
         eastLightValue = ofToString(ard.getAnalog(pinNum));
-        //b = ofMap(ard.getAnalog(pinNum),0,1023,0,255);
+        //Stores the int value into a variable
         ieastLightValue = ard.getAnalog(pinNum);
-    }
+    }//Reads the value of the South Input
     if(pinNum==3){
-        //lightValue = "Light: " + ofToString(pinNum) + " = " + ofToString(ard.getAnalog(pinNum));
+        //Stores de value into a string
         southLightValue = ofToString(ard.getAnalog(pinNum));
+        //Stores the int value into a variable
         isouthLightValue = ard.getAnalog(pinNum);
-        //g = ofMap(ard.getAnalog(pinNum),0,1023,0,255);
-    }
+
+    }//Reads the value of the Potentiometer Input
     if(pinNum==4){
-        //lightValue = "Light: " + ofToString(pinNum) + " = " + ofToString(ard.getAnalog(pinNum));
+        //Stores de value into a string
         potValue = ofToString(ard.getAnalog(pinNum));
+        //Stores the int value into a variable
         iPotValue = ard.getAnalog(pinNum);
+        //will fade according to the potentiometer input
         cameraGray = ofMap(ard.getAnalog(pinNum),510,1023,55,255);
-        //g = ofMap(ard.getAnalog(pinNum),0,1023,0,255);
+
     }
 }
 //--------------------------------------------------------------
 void ofApp::draw(){
-    currentTime = ofGetElapsedTimeMillis();
+
     ofEnableAlphaBlending();
     ofSetColor(0, 0, 0, 127);
     ofDisableAlphaBlending();
     ofSetColor(255);
-    //ARDUINO NOT WORKING
+
+    //Used to count the calibratin time
+    currentTime = ofGetElapsedTimeMillis();
+
+    ///ARDUINO NOT WORKING
     if (!bSetupArduino){
         ofSetColor(255,0,0);
         font.drawString("arduino not ready...", 20, 35);
-        //font.drawString(currentTime, 515, 40);
-        //ARDUINO WORKING
-        } else {
-        //CALIBRATION
-       if(calibrationControl==1)  {
 
+        ///ARDUINO WORKING
+        } else {
+        ///CALIBRATION CONTROL
+        //Case when Max Calibration
+       if(calibrationControl==1)  {
+        //Will stop when calibration time is done
         if(currentTime < endTime){
            ofSetColor(255,0,0);
 	      font.drawString("MAX CALIBRATION", 20, 35);
@@ -196,11 +220,13 @@ void ofApp::draw(){
                     eastMax = ieastLightValue;
                 if(isouthLightValue>southMax)
                     southMax = isouthLightValue;
+        //Stops the calibration
         }else if(currentTime>=endTime){
             calibrationControl=0;
         }
-
+    //Case when Min Calibration
 	  }else if(calibrationControl==2){
+	      //Will stop when calibration time is done
 	      if(currentTime < endTime){
            ofSetColor(255,0,0);
 	      font.drawString("MIN CALIBRATION", 20, 35);
@@ -217,9 +243,12 @@ void ofApp::draw(){
                     eastMin = ieastLightValue;
                 if(isouthLightValue<southMin)
                     southMin = isouthLightValue;
+        //Stops the calibration
 	      }else if(currentTime>=endTime){
             calibrationControl=0;
         }
+
+        ///DEFAULT STATE< INICIAL SCREEN
 	  }else if(calibrationControl==0&& bug == 0){
             //DEFAULT STATE
             if (state == 0){
@@ -253,7 +282,6 @@ void ofApp::draw(){
                     ofRect(0+recWidth*i,recHeight,recWidth,recHeight);
                 }
 
-
                 //draw rectangles down
                 for(int i =0 ; i<3;i++){
                     if(i==0)
@@ -266,24 +294,25 @@ void ofApp::draw(){
                     ofRect(0+recWidth*i,recHeight*2,recWidth,recHeight);
                 }
                 ofSetColor(255,0,0);
-                //font.drawString(potValue, 515, 40);
-                //font.drawString(lightValue, 415, 40);
+                //Converts the potentiometer input in a percentage
                 int percMapped = ofMap(iPotValue,0,1023,100,0,true);
                 string percentage = ofToString(percMapped);
+                //String to show when showinput is on
                 string values = "Inputs\nWest Sensor: "+westLightValue+"\nNorth Sensor: "+northLightValue+"\nEast Sensor: "+eastLightValue+"\nSouth Sensor: "+southLightValue+"\nPotentiometer: "+potValue+"\nPercentage: "+percentage;
+                //shows the readed values
                 if(showInput==1){
                 font.drawString(values, 20, 35);
                 }
                 ofSetColor(255, 255, 255);
             }
-            //PRESENTATION STATE
+//-----------------------------------------------------------------------------------------------
+            ///DEFAULT STATE VERSION WITH BUG
             }else if(calibrationControl==0 && bug == 1){
 
                  for (int x=0; x<ofGetWidth()/scale; x++)
                     {
                     for (int y=0; y < ofGetHeight()/scale; y++)
                     {
-
 
 
             float noiseValue = ofNoise(x*noiseScale, y*noiseScale, float(ofGetFrameNum())*noiseScale);
@@ -317,23 +346,23 @@ void ofApp::draw(){
 
 
             }
-
-             //PRESENTATION STATE
+//-----------------------------------------------------------------------------------------------
+             ///PRESENTATION STATE
             if(state ==1&&calibrationControl==0){
-            //ofSetColor(0);
-            ///EVERYTHING
+
+
             //ONE IF FOR EACH LVL
+            //The first 5 lvl will simply show the camera input and will fade it out according to the potentiometer
+            ///LVL 0
             if(lvl==0){
-                //  if (imgBuffer.size()>0){
-                    //ofSetColor(0,0,0,100);
+
                     ofSetColor(cameraGray);
                     ofImage f =  imgBuffer[0];
                     f.resize(ofGetWidth(),ofGetHeight());
                     f.draw(0,0);
-                    //ofSetColor(0,0,0,50);
-                    //ofRect(0,0,ofGetWidth(),ofGetHeight());
+
                      ofSetColor(255,0,0);
-                      int percMapped = ofMap(iPotValue,0,1023,100,0,true);
+                int percMapped = ofMap(iPotValue,0,1023,100,0,true);
                 string percentage = ofToString(percMapped);
                 string values = "Inputs\nWest Sensor: "+westLightValue+"\nNorth Sensor: "+northLightValue+"\nEast Sensor: "+eastLightValue+"\nSouth Sensor: "+southLightValue+"\nPotentiometer: "+potValue+"\nPercentage: "+percentage;
                 if(showInput==1){
@@ -344,7 +373,8 @@ void ofApp::draw(){
                     ofSetColor(255,255,255);
                     percentage = ofToString(percMapped)+"%";
                     font.drawString(percentage, ofGetWidth()-60, 35);
-                    }else if(lvl==1){
+                    }///LVL 1
+                    else if(lvl==1){
                     ofSetColor(cameraGray);
                     ofImage f =  imgBuffer[0];
                     f.resize(ofGetWidth(),ofGetHeight());
@@ -358,7 +388,8 @@ void ofApp::draw(){
                 }ofSetColor(255,255,255);
                     percentage = ofToString(percMapped)+"%";
                     font.drawString(percentage, ofGetWidth()-60, 35);
-                    }else if(lvl==2){
+                    }///LVL 2
+                    else if(lvl==2){
                     ofSetColor(cameraGray);
                     ofImage f =  imgBuffer[0];
                     f.resize(ofGetWidth(),ofGetHeight());
@@ -372,7 +403,8 @@ void ofApp::draw(){
                 }ofSetColor(255,255,255);
                     percentage = ofToString(percMapped)+"%";
                     font.drawString(percentage, ofGetWidth()-60, 35);
-                    }else if(lvl==3){
+                    }///LVL 3
+                    else if(lvl==3){
                     ofSetColor(cameraGray);
                     ofImage f =  imgBuffer[0];
                     f.resize(ofGetWidth(),ofGetHeight());
@@ -386,7 +418,8 @@ void ofApp::draw(){
                 }ofSetColor(255,255,255);
                     percentage = ofToString(percMapped)+"%";
                     font.drawString(percentage, ofGetWidth()-60, 35);
-                    }else if(lvl==4){
+                    }///LVL 4
+                    else if(lvl==4){
                     ofSetColor(cameraGray);
                     ofImage f =  imgBuffer[0];
                     f.resize(ofGetWidth(),ofGetHeight());
@@ -400,7 +433,7 @@ void ofApp::draw(){
                 }ofSetColor(255,255,255);
                     percentage = ofToString(percMapped)+"%";
                     font.drawString(percentage, ofGetWidth()-60, 35);
-                }
+                }///LVL 5
                 else if(lvl==5){
                     ofSetColor(cameraGray);
                     ofImage f =  imgBuffer[0];
@@ -415,7 +448,7 @@ void ofApp::draw(){
                 }ofSetColor(255,255,255);
                     percentage = ofToString(percMapped)+"%";
                     font.drawString(percentage, ofGetWidth()-60, 35);
-                }
+                }///LVL 6
                 else if(lvl==6){
 
 
@@ -438,41 +471,8 @@ void ofApp::draw(){
                 ofSetColor(255,255,255);
                     percentage = ofToString(percMapped)+"%";
                     font.drawString(percentage, ofGetWidth()-60, 35);
-                    //drawBlindImageNoise(minBlind,maxBlind,reactionTresh);
-/*
-                   for (int x=0; x<ofGetWidth()/scale; x++)
-                    {
-                    for (int y=0; y < ofGetHeight()/scale; y++)
-                    {
 
-
-
-            float noiseValue = ofNoise(x*noiseScale, y*noiseScale, float(ofGetFrameNum())*noiseScale);
-            //ofSetColor(noiseValue * getBalancedColor(x,y));
-            ofSetColor(getBalancedColor(x,y));
-            ofRect(x*scale,y*scale,scale,scale);
-        }
-        }
-                    ofSetColor(northColor);
-                    ofCircle(northX,northY,30);
-
-                    ofSetColor(eastColor);
-                    ofCircle(eastX,eastY,30);
-
-                    ofSetColor(southColor);
-                    ofCircle(soutX,southY,30);
-
-                    ofSetColor(westColor);
-                    ofCircle(westX,westY,30);
-
-
-
-
-                    ofSetColor(255);
-                    string values = "Values "+westLightValue+" "+northLightValue+" "+eastLightValue+" "+southLightValue+" "+potValue+" "+sLvl;
-                    font.drawString(values, 215, 40);
-*/
-                }
+                }///LVL 7
                 else if(lvl==7){
                     ofBackground(0,0,255);  ofSetColor(100);
                     minBlind=30;
@@ -489,7 +489,8 @@ void ofApp::draw(){
                 }ofSetColor(255,255,255);
                     percentage = ofToString(percMapped)+"%";
                     font.drawString(percentage, ofGetWidth()-60, 35);
-                    }else if(lvl==8){
+                    }///LVL 8
+                    else if(lvl==8){
                     ofBackground(0,0,255);  ofSetColor(100);
                     minBlind=15;
                     maxBlind=40;
@@ -505,7 +506,8 @@ void ofApp::draw(){
                 }ofSetColor(255,255,255);
                     percentage = ofToString(percMapped)+"%";
                     font.drawString(percentage, ofGetWidth()-60, 35);
-                    }else if(lvl==9){
+                    }///LVL 9
+                    else if(lvl==9){
                     ofBackground(0,0,255);  ofSetColor(100);
                     minBlind=0;
                     maxBlind=20;
@@ -521,7 +523,8 @@ void ofApp::draw(){
                 }ofSetColor(255,255,255);
                     percentage = ofToString(percMapped)+"%";
                     font.drawString(percentage, ofGetWidth()-60, 35);
-                    }else if(lvl==10){
+                    }///LVL 10
+                    else if(lvl==10){
                     ofBackground(0);
                      ofSetColor(255,0,0);
                       int percMapped = ofMap(iPotValue,0,1023,100,0,true);
@@ -546,48 +549,53 @@ void ofApp::draw(){
 
 
     void ofApp::keyPressed  (int key){
+        //Turns calibration control to Max Calibration
         if(key == OF_KEY_UP) {
             calibrationControl = 1;
+            //Sets the end time of calibration
             endTime = currentTime+duration;
-        }
+        }//Turns calibration control to Min Calibration
         if(key == OF_KEY_DOWN) {
             calibrationControl=2;
+            //Sets the end time of calibration
             endTime = currentTime+duration;
-        }
+        }//Starts the Presentation
         if(key == 's') {
 
             state = 1;
-            //imgWidth = ofGetWidth();
-            //imgHeight = ofGetHeight();
-        }
-        if(key == 'p') {
-            //imgWidth = ofGetWidth()/3;
-            //imgHeight = ofGetHeight()/3;
-            state = 0;
-        }
 
+        }//Pauses the presentation
+        if(key == 'p') {
+
+            state = 0;
+        }//Shows INPUTS on screen
         if((key == 'i')) {
-            //imgWidth = ofGetWidth()/3;
-            //imgHeight = ofGetHeight()/3;
+
             showInput = 1;
-        }
+        }//Hide INPUTS from screen
         if((key == 'o')) {
-            //imgWidth = ofGetWidth()/3;
-            //imgHeight = ofGetHeight()/3;
+
             showInput = 0;
-        }
+        }//Turns on the alternative mode on default screen
         if((key == 'q')) {
-            //imgWidth = ofGetWidth()/3;
-            //imgHeight = ofGetHeight()/3;
+
             bug = 0;
-        }
+        }//Turns off the alternative mode on default screen
         if((key == 'w')) {
-            //imgWidth = ofGetWidth()/3;
-            //imgHeight = ofGetHeight()/3;
+
             bug = 1;
         }
 
     }
+//Function uses in the levels
+//Noise is added in that version to make it more viasuallt beautiful
+//is feeded witg 3 values
+//minblind=the darker the screen will get in that lvl
+//
+//maxvlind=the brighter the screen will get in that lvl
+//
+//reactiontresh= how close to the maximum value of the input the light has to be for the gray start to
+//variate between the min and the max from that LVL
 
     void ofApp::drawBlindImageNoise(int minBlind,int maxBlind,int reactionTresh){
         int recWidth = ofGetWidth()/3;
@@ -701,6 +709,14 @@ void ofApp::draw(){
     }
 
 
+//Up function with no noise
+//is feeded witg 3 values
+//minblind=the darker the screen will get in that lvl
+//
+//maxvlind=the brighter the screen will get in that lvl
+//
+//reactiontresh= how close to the maximum value of the input the light has to be for the gray start to
+//variate between the min and the max from that LVL
 
     void ofApp::drawBlindImage(int minBlind,int maxBlind,int reactionTresh){
         int recWidth = ofGetWidth()/3;
@@ -782,6 +798,7 @@ void ofApp::draw(){
         }
     }
 
+//returns the maximum value of the inputs
     int ofApp::getMax (int a, int b, int c, int d){
         if(a*3>b+c+d){
             return a;
@@ -793,7 +810,7 @@ void ofApp::draw(){
             return d;
         }
     }
-
+//will get the color balanced according to the distances to the real sensors
     int ofApp::getBalancedColor (int x, int y){
          int dn,de,dw,ds,dsum;
          int balanced;

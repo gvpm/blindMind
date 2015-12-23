@@ -448,7 +448,10 @@ void ofApp::draw(){
                 }ofSetColor(255,255,255);
                     percentage = ofToString(percMapped)+"%";
                     font.drawString(percentage, ofGetWidth()-60, 35);
-                }///LVL 6
+                }
+                //Starting from lvl 6 the function drawBlindImageNoise(minBlind,maxBlind,reactionTresh); is called
+                //The 3 values minBlind, maxBlind and reactionTresh given to the function will be diffrent for each lvl
+                ///LVL 6
                 else if(lvl==6){
 
 
